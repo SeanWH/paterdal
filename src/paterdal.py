@@ -15,6 +15,8 @@ class Paterdal:
             row_offset=10,
             h_tile_size=80,
             v_tile_size=80,
+            cols=5,
+            rows=6,
             line_width=4,
             line_color=(0, 0, 0),
             background_color=(255, 255, 255),
@@ -33,8 +35,17 @@ class Paterdal:
         pygame.init()
 
         # 8x8 square board
-        self.cols = 5
-        self.rows = 6
+        self.cols = cols
+        self.rows = rows
+
+        self.board = {
+            '1': [],
+            '2': [],
+            '3': [],
+            '4': [],
+            '5': [],
+            '6': []
+        }
 
         self.col_offset = col_offset
         self.row_offset = row_offset
@@ -47,7 +58,9 @@ class Paterdal:
         # Set up the PyGame window:
         self.width = round(2 * self.col_offset + self.cols * self.h_tile_size)
         self.height = round(2 * self.row_offset + self.rows * self.v_tile_size)
-        self.screen = pygame.display.set_mode((self.width, self.height))
+        self.screen = pygame.display.set_mode((self.width, self.height),
+                                              pygame.RESIZABLE
+                                              )
 
         # Set window title:
         pygame.display.set_caption("Paterdal")
@@ -106,36 +119,44 @@ class Paterdal:
         """
 
         col_offset = self.col_offset if col_offset < 0 else col_offset
-        cols = self.cols if cols < 0 else self.cols
-        rows = self.rows if rows < 0 else self.rows
-        h_tile_size = self.h_tile_size if h_tile_size < 0 else self.h_tile_size
-        v_tile_size = self.v_tile_size if v_tile_size < 0 else self.v_tile_size
+        row_offset = self.row_offset if row_offset < 0 else row_offset
+        cols = self.cols if cols < 0 else cols
+        rows = self.rows if rows < 0 else rows
+        h_tile_size = self.h_tile_size if h_tile_size < 0 else h_tile_size
+        v_tile_size = self.v_tile_size if v_tile_size < 0 else v_tile_size
 
-        c = round(col_offset + cols * h_tile_size)
-        r = round(row_offset + rows * v_tile_size)
+        # Squares...
+        tile_size = max(h_tile_size, v_tile_size)
+        self.h_tile_size = tile_size
+        self.v_tile_size = tile_size
+
+        c = round((2 * col_offset) + cols * tile_size)
+        r = round((2 * row_offset) + rows * tile_size)
 
         return c, r
 
     def resize(self, new_width, new_height):
-        new_size = min(new_width, new_height)
-        new_size = 200 if new_size < 200 else new_size
+        """
+        Resizes the board.
+        :param new_width:
+        :param new_height:
+        :return:
+        """
+        width = 200 if new_width < 200 else new_width
+        height = 200 if new_height < 200 else new_height
 
         c, r = self.get_size()
-        delta_c = new_size / c
-        delta_r = new_size / r
 
-        self.col_offset *= delta_c
-        self.row_offset *= delta_r
-        self.h_tile_size *= delta_c
-        self.v_tile_size *= delta_r
+        w_ratio = width / c
+        h_ratio = height / r
 
-        # recalculate the new size with the new
-        # offset and tile_size
-        c, r = self.get_size()
+        self.col_offset *= w_ratio
+        self.row_offset *= h_ratio
+        self.v_tile_size *= w_ratio
+        self.h_tile_size *= h_ratio
 
-        self.screen = pygame.display.set_mode((c, r),
-                                              pygame.RESIZABLE
-                                              )
+        new_c, new_r = self.get_size()
+        self.screen = pygame.display.set_mode((new_c, new_r), pygame.RESIZABLE)
 
         self.draw_board()
 
@@ -157,6 +178,11 @@ class Paterdal:
                 if event.type == pygame.MOUSEBUTTONUP:
                     pass
 
+                # Implement scrollable screen
+                # scrolls by ROWS, not incrementally
+                if event.type == pygame.MOUSEWHEEL:
+                    pass
+
                 # PyGame window was resized:
                 if event.type == pygame.VIDEORESIZE:
                     self.resize(event.w, event.h)
@@ -170,6 +196,14 @@ class Paterdal:
                     # If the pressed key was ESC, exit:
                     if event.key == pygame.K_ESCAPE:
                         finished = True
+                    # If the pressed key was DOWN ARROW, scroll screen
+                    # one row down
+                    if event.key == pygame.K_DOWN:
+                        pass
+                    # If the pressed key was UP ARROW, scroll screen
+                    # one row up
+                    if event.key == pygame.K_UP:
+                        pass
 
             # Limit refresh rate to 20 frames per second:
             self.clock.tick(20)
