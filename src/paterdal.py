@@ -3,6 +3,8 @@ import numpy
 import matplotlib
 
 
+# pylint: disable=no-member
+
 class Paterdal:
     """
     An implementation of WORDLE(tm) designed with the visually impaired
@@ -39,12 +41,12 @@ class Paterdal:
         self.rows = rows
 
         self.board = {
-            '1': [],
-            '2': [],
-            '3': [],
-            '4': [],
-            '5': [],
-            '6': []
+            '1': ["", "", "", "", ""],
+            '2': ["", "", "", "", ""],
+            '3': ["", "", "", "", ""],
+            '4': ["", "", "", "", ""],
+            '5': ["", "", "", "", ""],
+            '6': ["", "", "", "", ""]
         }
 
         self.col_offset = col_offset
@@ -71,32 +73,59 @@ class Paterdal:
         # Draw the board
         self.draw_board()
 
-    def draw_board(self):
-        """Displays the grid"""
+    def get_letter(self, attempt, col):
+        """
+        Returns a specific letter from a specific guess
+        :param attempt:
+        :param col:
+        :return:
+        """
+        row = self.board[attempt]
+        return row[col]
 
-        # Fill the PyGame window with white color:
-        color = self.back_color  # white
-        self.screen.fill(color)
+    def get_guess(self, attempt):
+        """
+        Returns the entire list of letters from the guess
+        :param attempt:
+        :return:
+        """
+        return self.board[attempt]
 
-        # Set common square attributes
-        color = self.line_color  # black
-        lw = self.line_width  # line width
+    def calculate_points(self, col, row):
+        """
+        Calculates the points of a given cell on the board, based
+        on the cell's col, row, and offsets.
+        :param col:
+        :param row:
+        :return:
+        """
         col_offset = round(self.col_offset)
         row_offset = round(self.row_offset)
 
-        for r in range(self.rows):
-            for c in range(self.cols):
-                x_start = col_offset + self.h_tile_size * c
-                y_start = row_offset + self.v_tile_size * r
-                x_end = x_start + self.h_tile_size
-                y_end = y_start + self.v_tile_size
-                points = [
-                    (x_start, y_start),
-                    (x_end, y_start),
-                    (x_end, y_end),
-                    (x_start, y_end),
-                ]
-                pygame.draw.lines(self.screen, color, True, points, lw)
+        x_start = col_offset + self.h_tile_size * col
+        y_start = row_offset + self.v_tile_size * row
+        x_end = x_start + self.h_tile_size
+        y_end = y_start + self.v_tile_size
+        points = [
+            (x_start, y_start),
+            (x_end, y_start),
+            (x_end, y_end),
+            (x_start, y_end),
+        ]
+
+        return points
+
+    def draw_board(self):
+        """Displays the grid"""
+
+        self.screen.fill(self.back_color)
+
+        for row in range(self.rows):
+            for col in range(self.cols):
+                points = self.calculate_points(col, row)
+                pygame.draw.lines(self.screen, self.line_color, True, points,
+                                  self.line_width
+                                  )
 
     def get_size(self,
                  col_offset=-1,
@@ -107,7 +136,7 @@ class Paterdal:
                  v_tile_size=-1
                  ):
         """
-        Returns either the calculated size of the board based on the
+        Returns the calculated size of the board based on the
         above parameters.
         :param col_offset:
         :param row_offset
@@ -130,10 +159,30 @@ class Paterdal:
         self.h_tile_size = tile_size
         self.v_tile_size = tile_size
 
-        c = round((2 * col_offset) + cols * tile_size)
-        r = round((2 * row_offset) + rows * tile_size)
+        width = round((2 * col_offset) + cols * tile_size)
+        height = round((2 * row_offset) + rows * tile_size)
 
-        return c, r
+        return width, height
+
+    def calculate_new_size(self, width, height):
+        """
+        Determines the new size of the resized screen
+        :param width:
+        :param height:
+        :return:
+        """
+
+        current_width, current_height = self.get_size()
+
+        width_ratio = width / current_width
+        height_ratio = height / current_height
+
+        self.col_offset *= width_ratio
+        self.row_offset *= height_ratio
+        self.v_tile_size *= width_ratio
+        self.h_tile_size *= height_ratio
+
+        return self.get_size()
 
     def resize(self, new_width, new_height):
         """
@@ -143,20 +192,13 @@ class Paterdal:
         :return:
         """
         width = 200 if new_width < 200 else new_width
-        height = 200 if new_height < 200 else new_height
+        height = 300 if new_height < 300 else new_height
 
-        c, r = self.get_size()
+        new_width, new_height = self.calculate_new_size(width, height)
 
-        w_ratio = width / c
-        h_ratio = height / r
-
-        self.col_offset *= w_ratio
-        self.row_offset *= h_ratio
-        self.v_tile_size *= w_ratio
-        self.h_tile_size *= h_ratio
-
-        new_c, new_r = self.get_size()
-        self.screen = pygame.display.set_mode((new_c, new_r), pygame.RESIZABLE)
+        self.screen = pygame.display.set_mode((new_width, new_height),
+                                              pygame.RESIZABLE
+                                              )
 
         self.draw_board()
 
