@@ -1,16 +1,22 @@
+"""
+   An implementation of WORDLE(tm) designed with the visually impaired
+   in mind.
+"""
+import sqlite3
+import random
+import datetime
+
 import pygame
-import numpy
-import matplotlib
+
+from more_itertools import collapse
 
 
 # pylint: disable=no-member
 
 class Paterdal:
     """
-    An implementation of WORDLE(tm) designed with the visually impaired
-    in mind.
+    The implementation
     """
-
     def __init__(
             self,
             col_offset=10,
@@ -41,12 +47,12 @@ class Paterdal:
         self.rows = rows
 
         self.board = {
-            '1': ["", "", "", "", ""],
-            '2': ["", "", "", "", ""],
-            '3': ["", "", "", "", ""],
-            '4': ["", "", "", "", ""],
-            '5': ["", "", "", "", ""],
-            '6': ["", "", "", "", ""]
+            1: ["", "", "", "", ""],
+            2: ["", "", "", "", ""],
+            3: ["", "", "", "", ""],
+            4: ["", "", "", "", ""],
+            5: ["", "", "", "", ""],
+            6: ["", "", "", "", ""]
         }
 
         self.col_offset = col_offset
@@ -56,6 +62,9 @@ class Paterdal:
         self.line_width = line_width
         self.line_color = line_color
         self.back_color = background_color
+
+        self.current_try = 1
+        self.current_cell = 0
 
         # Set up the PyGame window:
         self.width = round(2 * self.col_offset + self.cols * self.h_tile_size)
@@ -70,8 +79,72 @@ class Paterdal:
         # Manage how frequently the screen updates
         self.clock = pygame.time.Clock()
 
+        self.word = self.get_word_from_db()
+        self.letters = self.split_word(self.word)
+
         # Draw the board
         self.draw_board()
+
+    def split_word(self, word):
+        """
+        Splits word into its individual letters and
+        returns that as a list.
+        :param word:
+        :return:
+        """
+        letters = []
+        for letter in word:
+            letters.append(letter)
+
+        return letters
+
+    def get_word_from_db(self):
+        """
+        Gets the word used from the database
+        :return:
+        """
+        database = sqlite3.connect("wordlist.db")
+        db_cursor = database.cursor()
+        alpha_indices = db_cursor.execute(
+            "SELECT DISTINCT alpha_idx FROM words"
+            )
+        index_list = list(collapse(alpha_indices.fetchall()))
+
+        use_date = "2022-01-01"
+
+        while use_date != "":
+            index = random.choice(index_list)
+            word_data = db_cursor.execute(
+                "SELECT word, used_date FROM words WHERE alpha_idx = :index",
+                index
+            )
+            word_list = word_data.fetchall()
+            word, use_date = random.choice(word_list)
+
+        # mark the word as used
+        use_date = datetime.date.today()
+        db_cursor.execute(
+            "UPDATE words SET used_date = :use_date WHERE word = :word",
+            [use_date, word]
+            )
+        database.commit()
+        database.close()
+        return word
+
+    def is_alpha_key(self, event_key):
+        """
+        Is the key pressed a letter key?
+        :param event_key:
+        :return:
+        """
+        return event_key in [
+            pygame.K_a, pygame.K_b, pygame.K_c, pygame.K_d, pygame.K_e,
+            pygame.K_f, pygame.K_g, pygame.K_h, pygame.K_i, pygame.K_j,
+            pygame.K_k, pygame.K_l, pygame.K_m, pygame.K_n, pygame.K_o,
+            pygame.K_p, pygame.K_q, pygame.K_r, pygame.K_s, pygame.K_t,
+            pygame.K_u, pygame.K_v, pygame.K_w, pygame.K_x, pygame.K_y,
+            pygame.K_z
+        ]
 
     def get_letter(self, attempt, col):
         """
@@ -245,6 +318,9 @@ class Paterdal:
                     # If the pressed key was UP ARROW, scroll screen
                     # one row up
                     if event.key == pygame.K_UP:
+                        pass
+                    # Handle alpha keys here
+                    if self.is_alpha_key(event.key):
                         pass
 
             # Limit refresh rate to 20 frames per second:
